@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MinTree — Why the Next Tree You Plant Matters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest: #152016;
+    --forest-2: #1E2E1B;
+    --moss: #3E5C3A;
+    --moss-light: #5B7D53;
+    --sage: #8FA382;
+    --bark: #5C4432;
+    --bark-dark: #3B2C1F;
+    --paper: #F6F1E7;
+    --paper-dim: #E7DFCB;
+    --ink: #1C2418;
+    --ink-dim: rgba(28,36,24,0.62);
+    --ink-faint: rgba(28,36,24,0.4);
+    --gold: #C9A227;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  a{ color: inherit; text-decoration: none; }
+  img, svg{ display:block; max-width:100%; }
+
+  .wrap{ max-width: 760px; margin: 0 auto; padding: 0 28px; }
+  .wrap-wide{ max-width: 1040px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------------- NAV ---------------- */
+  nav{
+    position: sticky; top: 0; z-index: 60;
+    background: rgba(246,241,231,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(28,36,24,0.08);
+  }
+  .nav-inner{
+    max-width: 1040px; margin: 0 auto; padding: 16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo{
+    font-family: var(--font-display);
+    font-weight: 700; font-size: 21px; letter-spacing: -0.01em;
+    display:flex; align-items:center; gap:8px; color: var(--forest);
+  }
+  .logo svg{ width:20px; height:20px; }
+  .nav-links{ display:flex; gap:30px; font-size:13.5px; color: var(--ink-dim); }
+  .nav-links a:hover{ color: var(--forest); }
+  .nav-cta{
+    font-size: 13.5px; font-weight:600; padding:9px 16px; border-radius: 999px;
+    background: var(--forest); color: var(--paper);
+  }
+  @media (max-width:680px){ .nav-links{ display:none; } }
+
+  /* ---------------- HERO ---------------- */
+  .hero{ position: relative; padding: 64px 0 20px; overflow: hidden; }
+  .hero-meta{
+    font-family: var(--font-mono);
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--moss); margin-bottom: 18px;
+    opacity:0; animation: fadeUp .7s ease forwards;
+  }
+  .hero h1{
+    font-family: var(--font-display);
+    font-size: clamp(34px, 6vw, 58px);
+    font-weight: 700; line-height: 1.06; letter-spacing: -0.01em;
+    color: var(--forest); margin-bottom: 22px;
+    opacity:0; animation: fadeUp .7s ease .1s forwards;
+  }
+  .hero-dek{
+    font-size: 17.5px; line-height: 1.65; color: var(--ink-dim);
+    max-width: 600px; margin-bottom: 26px;
+    opacity:0; animation: fadeUp .7s ease .2s forwards;
+  }
+  .byline{
+    display:flex; align-items:center; gap:12px; margin-bottom: 40px;
+    opacity:0; animation: fadeUp .7s ease .3s forwards;
+  }
+  .byline-avatar{
+    width:34px; height:34px; border-radius:50%;
+    background: linear-gradient(135deg, var(--moss-light), var(--forest));
+  }
+  .byline-name{ font-size: 13.5px; font-weight:600; color: var(--forest); }
+  .byline-sub{ font-size: 12px; color: var(--ink-faint); font-family: var(--font-mono); }
+
+  @keyframes fadeUp{ from{opacity:0; transform: translateY(16px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------------- HERO TREE ART ---------------- */
+  .tree-stage{
+    position: relative;
+    width: 100%;
+    height: 460px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #DCE7D2 0%, #C9DAC0 55%, #B7CBAC 100%);
+    opacity:0; animation: fadeUp .9s ease .25s forwards;
+  }
+  .tree-stage svg{ width:100%; height:100%; }
+  .sun{ fill: #F4E7B6; opacity: 0.9; }
+  .hill-back{ fill: #A9C29B; }
+  .hill-front{ fill: #93B384; }
+  .trunk{ fill: url(#barkGrad); }
+  .foliage{ fill: url(#leafGrad); }
+  .foliage-shadow{ fill: #33502F; opacity: 0.18; }
+
+  .leaf-layer{
+    position:absolute; inset:0; pointer-events:none;
+  }
+  .leaf{
+    position:absolute; top:-24px;
+    font-size: 16px;
+    opacity: 0.85;
+    animation: fall linear infinite;
+    color: var(--moss);
+  }
+  @keyframes fall{
+    0%{ transform: translateY(-30px) translateX(0) rotate(0deg); opacity:0; }
+    8%{ opacity: 0.85; }
+    100%{ transform: translateY(500px) translateX(40px) rotate(340deg); opacity:0; }
+  }
+
+  /* ---------------- ARTICLE TYPOGRAPHY ---------------- */
+  .article{ padding: 56px 0 10px; }
+  .article p{
+    font-size: 17.5px; line-height: 1.8; color: var(--ink);
+    margin-bottom: 26px;
+  }
+  .drop p:first-of-type::first-letter{
+    font-family: var(--font-display);
+    font-size: 76px; font-weight: 700; float:left;
+    line-height: 0.8; padding: 8px 10px 0 0; color: var(--forest);
+  }
+  .article h2{
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 700; color: var(--forest);
+    margin: 50px 0 20px; letter-spacing: -0.01em;
+  }
+
+  .pull-quote{
+    font-family: var(--font-display);
+    font-size: clamp(22px, 3vw, 28px);
+    font-weight: 600; font-style: italic;
+    color: var(--forest);
+    border-left: 3px solid var(--gold);
+    padding: 4px 0 4px 26px;
+    margin: 44px 0;
+    line-height: 1.45;
+  }
+
+  /* ---------------- STAT BREAK ---------------- */
+  .stat-break{
+    margin: 56px 0;
+    padding: 40px 28px;
+    background: var(--forest);
+    border-radius: 18px;
+    color: var(--paper);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    text-align:center;
+  }
+  @media (max-width:640px){ .stat-break{ grid-template-columns: 1fr; } }
+  .stat-num{
+    font-family: var(--font-display);
+    font-size: 40px; font-weight: 700; color: var(--gold);
+  }
+  .stat-label{
+    margin-top:6px; font-size: 12.5px; color: rgba(246,241,231,0.7);
+    line-height: 1.5;
+  }
+
+  /* ---------------- GROWING TREE SECTION ---------------- */
+  .grow-section{
+    padding: 30px 0 20px;
+    text-align:center;
+  }
+  .grow-section .section-eyebrow{
+    font-family: var(--font-mono); font-size: 12px; letter-spacing:0.1em;
+    text-transform: uppercase; color: var(--moss); margin-bottom:14px;
+  }
+  .grow-section h2{
+    font-family: var(--font-display); font-size: clamp(24px,3.4vw,34px);
+    color: var(--forest); font-weight:700; margin-bottom: 14px;
+  }
+  .grow-section p.sub{
+    color: var(--ink-dim); max-width: 520px; margin: 0 auto 30px; line-height:1.6;
+  }
+  .grow-stage{
+    width: 100%; max-width: 480px; margin: 0 auto;
+    height: 380px;
+  }
+  .grow-branch{
+    fill:none; stroke: var(--bark-dark); stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 400; stroke-dashoffset: 400;
+    transition: stroke-dashoffset 1.6s ease;
+  }
+  .grow-branch.small{ stroke-width: 3; }
+  .grow-leaf-cluster{
+    opacity: 0; transform: scale(0.6);
+    transform-origin: center;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .grow-stage.in .grow-branch{ stroke-dashoffset: 0; }
+  .grow-stage.in .grow-leaf-cluster{ opacity:1; transform: scale(1); }
+
+  /* ---------------- SECOND IMAGE BREAK ---------------- */
+  .image-break{
+    margin: 60px 0;
+    border-radius: 18px;
+    overflow: hidden;
+    height: 300px;
+    background: linear-gradient(180deg, #EFE7D3, #DCCFA7);
+    position: relative;
+  }
+  .image-break svg{ width:100%; height:100%; }
+  .image-caption{
+    font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint);
+    margin-top: 10px; text-align:center;
+  }
+
+  /* ---------------- WAYS TO HELP ---------------- */
+  .help-grid{
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+    margin: 40px 0 20px;
+  }
+  @media (max-width:680px){ .help-grid{ grid-template-columns:1fr; } }
+  .help-card{
+    background: var(--paper-dim);
+    border: 1px solid rgba(28,36,24,0.08);
+    border-radius: 14px;
+    padding: 22px;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .help-card:hover{ transform: translateY(-3px); border-color: var(--moss); }
+  .help-num{ font-family: var(--font-mono); font-size:12px; color: var(--moss); margin-bottom:10px; display:block; }
+  .help-card h4{ font-family: var(--font-display); font-size:16.5px; color: var(--forest); margin-bottom:8px; }
+  .help-card p{ font-size:13.5px; color: var(--ink-dim); line-height:1.55; }
+
+  /* ---------------- CTA ---------------- */
+  .cta-box{
+    margin: 60px 0;
+    border-radius: 20px;
+    padding: 50px 34px;
+    text-align:center;
+    background: linear-gradient(135deg, var(--forest), var(--moss));
+    color: var(--paper);
+    position: relative;
+    overflow:hidden;
+  }
+  .cta-box::before{
+    content:''; position:absolute; width:300px; height:300px;
+    background: radial-gradient(circle, rgba(201,162,39,0.25), transparent 70%);
+    top:-120px; right:-80px;
+  }
+  .cta-box h2{
+    font-family: var(--font-display); font-size: clamp(24px,3.4vw,32px);
+    font-weight:700; margin-bottom:14px; position:relative;
+  }
+  .cta-box p{ color: rgba(246,241,231,0.8); margin-bottom:26px; position:relative; }
+  .btn-gold{
+    display:inline-block; font-weight:600; font-size:14.5px;
+    padding:13px 26px; border-radius:999px;
+    background: var(--gold); color: var(--forest);
+    transition: transform 0.2s ease;
+    position:relative;
+  }
+  .btn-gold:hover{ transform: translateY(-2px); }
+
+  /* ---------------- RELATED ---------------- */
+  .related{ padding: 20px 0 70px; }
+  .related h3{
+    font-family: var(--font-display); font-size:20px; color: var(--forest);
+    margin-bottom: 24px;
+  }
+  .related-grid{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:18px;
+  }
+  @media (max-width:680px){ .related-grid{ grid-template-columns:1fr; } }
+  .related-card{
+    border-radius: 14px; overflow:hidden;
+    border: 1px solid rgba(28,36,24,0.08);
+    background: var(--paper-dim);
+  }
+  .related-thumb{ height: 110px; }
+  .related-thumb.t1{ background: linear-gradient(135deg,#8FA382,#3E5C3A); }
+  .related-thumb.t2{ background: linear-gradient(135deg,#C9A227,#5C4432); }
+  .related-thumb.t3{ background: linear-gradient(135deg,#5B7D53,#152016); }
+  .related-body{ padding: 16px; }
+  .related-tag{ font-family: var(--font-mono); font-size:10.5px; color: var(--moss); text-transform:uppercase; letter-spacing:0.06em; }
+  .related-title{ font-family: var(--font-display); font-size:15px; color: var(--forest); margin-top:6px; font-weight:600; line-height:1.35; }
+
+  /* ---------------- FOOTER ---------------- */
+  footer{
+    border-top: 1px solid rgba(28,36,24,0.08);
+    padding: 34px 0;
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:14px;
+    font-size:13px; color: var(--ink-faint);
+  }
+
+  /* ---------------- reveal ---------------- */
+  .reveal{ opacity:0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 6 5 10c0 2.5 1.3 4 3 5-1 2-3 3-3 3h14s-2-1-3-3c1.7-1 3-2.5 3-5 0-4-3-8-7-8z" fill="#3E5C3A"/><rect x="11" y="17" width="2" height="5" fill="#5C4432"/></svg>
+      MinTree
+    </div>
+    <div class="nav-links">
+      <a href="#grow">The science</a>
+      <a href="#help">Get involved</a>
+      <a href="#stories">More stories</a>
+    </div>
+    <a href="#help" class="nav-cta">Plant a tree</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-meta">Field Notes · 7 min read · Conservation</div>
+    <h1>The Quiet Machines That Keep Us Breathing</h1>
+    <p class="hero-dek">A single mature tree can move over a hundred gallons of water into the air a day, and quietly take a good chunk of your carbon footprint with it. Here's why the next tree you plant matters more than you think — and what's actually at stake if we stop.</p>
+    <div class="byline">
+      <div class="byline-avatar"></div>
+      <div>
+        <div class="byline-name">MinTree Editorial</div>
+        <div class="byline-sub">Updated for the 2026 planting season</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HERO TREE ILLUSTRATION -->
+  <div class="tree-stage">
+    <svg viewBox="0 0 800 460" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="barkGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#3B2C1F"/>
+          <stop offset="50%" stop-color="#5C4432"/>
+          <stop offset="100%" stop-color="#3B2C1F"/>
+        </linearGradient>
+        <radialGradient id="leafGrad" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#7CA168"/>
+          <stop offset="55%" stop-color="#4E7245"/>
+          <stop offset="100%" stop-color="#2E4A2A"/>
+        </radialGradient>
+      </defs>
+
+      <circle class="sun" cx="650" cy="90" r="55"/>
+      <path class="hill-back" d="M0,300 Q200,240 400,290 T800,270 L800,460 L0,460 Z"/>
+      <path class="hill-front" d="M0,360 Q220,300 420,350 T800,330 L800,460 L0,460 Z"/>
+
+      <!-- trunk -->
+      <path class="trunk" d="M375,460 C372,380 368,340 380,300 C390,270 395,250 388,230 L412,230 C405,250 410,270 420,300 C432,340 428,380 425,460 Z"/>
+
+      <!-- foliage clusters -->
+      <ellipse class="foliage-shadow" cx="405" cy="185" rx="175" ry="145"/>
+      <ellipse class="foliage" cx="400" cy="175" rx="175" ry="145"/>
+      <ellipse class="foliage" cx="290" cy="230" rx="95" ry="80" opacity="0.95"/>
+      <ellipse class="foliage" cx="510" cy="220" rx="100" ry="85" opacity="0.95"/>
+      <ellipse class="foliage" cx="400" cy="100" rx="120" ry="95" opacity="0.98"/>
+
+      <!-- birds -->
+      <path d="M120,80 q8,-10 16,0 q8,-10 16,0" fill="none" stroke="#33502F" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M170,60 q6,-8 12,0 q6,-8 12,0" fill="none" stroke="#33502F" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <div class="leaf-layer" id="leafLayer"></div>
+  </div>
+
+  <!-- ARTICLE BODY -->
+  <article class="article drop">
+    <p>Walk under a large oak on a hot afternoon and you'll feel it before you understand it: the air is cooler, quieter, easier to breathe. That's not ambience. That tree is actively pulling carbon dioxide out of the atmosphere, releasing oxygen, and evaporating water through its leaves fast enough to measurably drop the temperature around it.</p>
+    <p>We tend to think of trees as scenery. In reality they're closer to infrastructure — slow, solar-powered machines that filter air, hold soil in place, buffer flooding, and support more species than almost any other living structure on land. When a forest disappears, it's not just the trees that go. It's the whole quiet system built on top of them.</p>
+
+    <h2>What we're actually losing</h2>
+    <p>Global tree cover has been shrinking for decades, driven mostly by agricultural expansion, logging, and land conversion. The losses aren't evenly spread — tropical forests, which hold the densest concentration of biodiversity on the planet, are disappearing fastest, often to make way for short-term land use that degrades within a generation.</p>
+
+    <div class="pull-quote">"A forest isn't a resource waiting to be used. It's an economy that's already running."</div>
+
+    <p>The knock-on effects show up in places you wouldn't expect: shifting rainfall patterns hundreds of miles from the original clearing, soil that erodes faster without root systems to hold it, and local temperatures that climb once the canopy that used to provide shade is gone.</p>
+  </article>
+
+  <!-- STAT BREAK -->
+  <div class="stat-break reveal">
+    <div>
+      <div class="stat-num" data-count="22">0</div>
+      <div class="stat-label">kg of CO₂ a mature tree can absorb in a single year</div>
+    </div>
+    <div>
+      <div class="stat-num" data-count="100" data-suffix="+">0</div>
+      <div class="stat-label">gallons of water one large tree can move into the air daily</div>
+    </div>
+    <div>
+      <div class="stat-num" data-count="80" data-suffix="%">0</div>
+      <div class="stat-label">of land species that rely on forests as their primary habitat</div>
+    </div>
+  </div>
+
+  <article class="article">
+    <p>None of this means the situation is hopeless. Reforestation works, and it works faster than most people expect when it's done deliberately — matching species to soil, protecting young growth long enough for root systems to establish, and involving the communities who'll actually live alongside the forest afterward.</p>
+  </article>
+
+  <!-- GROWING TREE -->
+  <section class="grow-section" id="grow">
+    <div class="section-eyebrow">Watch it happen</div>
+    <h2>From seedling to canopy</h2>
+    <p class="sub">Scroll into view — this is roughly what the first five years of a planted tree's growth looks like, compressed into one frame.</p>
+    <div class="grow-stage" id="growStage">
+      <svg viewBox="0 0 300 380" xmlns="http://www.w3.org/2000/svg">
+        <path class="grow-branch" d="M150,370 C150,320 150,280 150,240" pathLength="400"/>
+        <path class="grow-branch small" d="M150,280 C150,280 110,250 90,220" pathLength="400"/>
+        <path class="grow-branch small" d="M150,260 C150,260 190,230 210,200" pathLength="400"/>
+        <path class="grow-branch small" d="M150,240 C150,240 130,190 120,150" pathLength="400"/>
+        <path class="grow-branch small" d="M150,240 C150,240 170,190 180,150" pathLength="400"/>
+        <g class="grow-leaf-cluster">
+          <ellipse cx="150" cy="140" rx="90" ry="75" fill="#4E7245"/>
+          <ellipse cx="95" cy="190" rx="45" ry="38" fill="#5B7D53"/>
+          <ellipse cx="205" cy="180" rx="48" ry="40" fill="#5B7D53"/>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- IMAGE BREAK: forest silhouette -->
+  <div class="image-break reveal">
+    <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice">
+      <rect width="800" height="300" fill="#EFE7D3"/>
+      <circle cx="640" cy="70" r="40" fill="#F4E7B6"/>
+      <g fill="#5B7D53" opacity="0.55">
+        <ellipse cx="60" cy="230" rx="60" ry="80"/>
+        <ellipse cx="150" cy="250" rx="70" ry="95"/>
+        <ellipse cx="250" cy="220" rx="55" ry="75"/>
+      </g>
+      <g fill="#3E5C3A" opacity="0.75">
+        <ellipse cx="340" cy="240" rx="75" ry="100"/>
+        <ellipse cx="460" cy="230" rx="65" ry="90"/>
+        <ellipse cx="560" cy="250" rx="80" ry="105"/>
+      </g>
+      <g fill="#152016">
+        <ellipse cx="650" cy="240" rx="70" ry="95"/>
+        <ellipse cx="740" cy="255" rx="65" ry="88"/>
+        <ellipse cx="720" cy="220" rx="50" ry="70"/>
+      </g>
+    </svg>
+  </div>
+  <div class="image-caption">A young mixed-species planting site — density like this establishes canopy cover within 4-6 years.</div>
+
+  <!-- WAYS TO HELP -->
+  <article class="article" id="help">
+    <h2>What actually moves the needle</h2>
+    <p>Planting a tree is the easy part. Getting it to survive its first three years — the point where most reforestation efforts quietly fail — is where the real work happens.</p>
+    <div class="help-grid">
+      <div class="help-card reveal">
+        <span class="help-num">01</span>
+        <h4>Plant what belongs</h4>
+        <p>Native species, matched to the soil and climate they evolved in, survive at far higher rates than fast-growing imports.</p>
+      </div>
+      <div class="help-card reveal">
+        <span class="help-num">02</span>
+        <h4>Protect the first years</h4>
+        <p>Young trees need water, protection from grazing, and space from invasive competition long before they're self-sufficient.</p>
+      </div>
+      <div class="help-card reveal">
+        <span class="help-num">03</span>
+        <h4>Involve who lives there</h4>
+        <p>Forests planted with, not around, local communities are dramatically more likely to still be standing a decade later.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- CTA -->
+  <div class="cta-box reveal">
+    <h2>Plant one. It adds up faster than you'd think.</h2>
+    <p>MinTree partners with verified local reforestation projects — every planting is tracked back to a real plot of land.</p>
+    <a href="#" class="btn-gold">Plant your first tree</a>
+  </div>
+
+  <!-- RELATED -->
+  <section class="related" id="stories">
+    <h3>More from the field</h3>
+    <div class="related-grid">
+      <div class="related-card">
+        <div class="related-thumb t1"></div>
+        <div class="related-body">
+          <div class="related-tag">Soil</div>
+          <div class="related-title">What tree roots are actually doing underground</div>
+        </div>
+      </div>
+      <div class="related-card">
+        <div class="related-thumb t2"></div>
+        <div class="related-body">
+          <div class="related-tag">Community</div>
+          <div class="related-title">The village that replanted its own watershed</div>
+        </div>
+      </div>
+      <div class="related-card">
+        <div class="related-thumb t3"></div>
+        <div class="related-body">
+          <div class="related-tag">Climate</div>
+          <div class="related-title">Why old growth can't just be replaced with new</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap-wide" style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:14px;">
+    <div>MinTree — planting with intention</div>
+    <div>Concept editorial page — built by King Joshua Marcos</div>
+  </div>
+</footer>
+
+<script>
+  // scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, {threshold:0.15});
+  revealEls.forEach(el=>io.observe(el));
+
+  // growing tree trigger
+  const growStage = document.getElementById('growStage');
+  const growIO = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ growStage.classList.add('in'); growIO.unobserve(growStage); }
+    });
+  }, {threshold:0.4});
+  growIO.observe(growStage);
+
+  // live counting stats
+  const statEls = document.querySelectorAll('.stat-num');
+  const countIO = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const el = entry.target;
+        const target = parseInt(el.dataset.count, 10);
+        const suffix = el.dataset.suffix || '';
+        const duration = 1200;
+        const start = performance.now();
+        function tick(now){
+          const progress = Math.min((now-start)/duration, 1);
+          const eased = 1 - Math.pow(1-progress, 3);
+          el.textContent = Math.round(eased*target) + suffix;
+          if(progress<1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        countIO.unobserve(el);
+      }
+    });
+  }, {threshold:0.5});
+  statEls.forEach(el=>countIO.observe(el));
+
+  // falling leaves in hero
+  const leafLayer = document.getElementById('leafLayer');
+  const leafChars = ['🍃','🍂'];
+  const leafCount = 14;
+  for(let i=0;i<leafCount;i++){
+    const leaf = document.createElement('div');
+    leaf.className = 'leaf';
+    leaf.textContent = leafChars[i % 2];
+    leaf.style.left = (Math.random()*100) + '%';
+    leaf.style.animationDuration = (6 + Math.random()*6) + 's';
+    leaf.style.animationDelay = (Math.random()*8) + 's';
+    leaf.style.fontSize = (12 + Math.random()*10) + 'px';
+    leafLayer.appendChild(leaf);
+  }
+</script>
+
+</body>
+</html>
